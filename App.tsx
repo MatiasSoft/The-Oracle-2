@@ -40,15 +40,6 @@ const App: React.FC = () => {
             onRequestValidation={handleValidationRequest}
           />
         );
-      case Tab.VALIDATOR:
-        return (
-          <CodeValidator
-            originalCode={originalCode}
-            setOriginalCode={setOriginalCode}
-            generatedCodes={generatedCodes}
-            setGeneratedCodes={setGeneratedCodes}
-          />
-        );
       default:
         return null;
     }
@@ -77,7 +68,6 @@ const App: React.FC = () => {
             <nav className="flex space-x-2" aria-label="Tabs">
               <TabButton tab={Tab.DETECTOR} label="Detector de Plagio" icon={<SearchCodeIcon />} />
               <TabButton tab={Tab.REWRITER} label="Reescritor de Código" icon={<SparklesIcon />} />
-              <TabButton tab={Tab.VALIDATOR} label="Validador de IA" icon={<ShieldCheckIcon />} />
             </nav>
           </div>
           <div className="p-6" key={activeTab}>
@@ -87,7 +77,7 @@ const App: React.FC = () => {
           </div>
         </div>
         <footer className="text-center text-brand-text-light mt-8 text-sm">
-          <p>Prototipo de Servidor de IA para Análisis de Código.</p>
+          <p>Prototipo de IA para Análisis de Código.</p>
         </footer>
       </main>
     </div>

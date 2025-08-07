@@ -75,39 +75,7 @@ ${instructions}
     }
 };
 
-export const getDifferenceSummary = async (originalCode: string, comparisonCode: string): Promise<string> => {
-    const model = 'gemini-2.5-flash';
-    const prompt = `
-Eres un experto en código Python. Tu tarea es comparar dos fragmentos de código y describir sus diferencias clave en una única oración concisa. Enfócate en la lógica, el algoritmo o la estructura. Sé directo.
 
-**Ejemplo de respuesta ideal:** "Usa un enfoque recursivo en lugar de la iteración con un bucle while del original."
-
-**Código Original:**
-\`\`\`python
-${originalCode}
-\`\`\`
-
-**Código a Comparar:**
-\`\`\`python
-${comparisonCode}
-\`\`\`
-
-**Resumen de la diferencia (una oración):**
-`;
-    try {
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: prompt,
-            config: {
-                temperature: 0.2,
-            }
-        });
-        return response.text.trim();
-    } catch (error) {
-        console.error("Error calling Gemini API for difference summary:", error);
-        return "No se pudo generar el resumen de diferencias.";
-    }
-};
 
 export const validateCode = async (originalCode: string, generatedCode: string): Promise<ValidationAnalysis> => {
     const model = 'gemini-2.5-flash';

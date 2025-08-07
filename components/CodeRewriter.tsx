@@ -137,14 +137,6 @@ const CodeRewriter: React.FC<CodeRewriterProps> = ({ originalCode, setOriginalCo
           {isLoading ? 'Generando...' : 'Generar Nuevas Versiones'}
         </button>
         {error && <p className="mt-4 text-red-500">{error}</p>}
-        {generatedCodes.length > 0 && !isLoading && (
-          <button
-            onClick={() => onRequestValidation(generatedCodes)}
-            className="mt-4 px-4 py-2 text-sm font-medium rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary hover:text-white transition-all duration-200 transform hover:scale-105"
-          >
-            Validar Todos los Códigos &rarr;
-          </button>
-        )}
       </div>
     </div>
   );

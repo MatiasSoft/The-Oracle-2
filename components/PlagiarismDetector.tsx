@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCodeSimilarity } from '../hooks/useCodeSimilarity';
-import { getDifferenceSummary } from '../services/geminiService';
+import { validateCode } from '../services/geminiService';
 import Spinner from './Spinner';
 import MultiFileInput from './MultiFileInput';
 import CodeInput from './CodeInput';
@@ -9,7 +9,11 @@ import { CodeFile } from '../App';
 interface PlagiarismResult {
   fileName: string;
   similarity: number;
-  summary: string;
+  analysis: {
+    appliedTechniques: string[];
+    functionalEquivalence: string;
+    implementationAnalysis: string;
+  };
 }
 
 const PlagiarismDetector: React.FC = () => {
@@ -28,25 +32,29 @@ const PlagiarismDetector: React.FC = () => {
     setResults([]);
     
     try {
+      const similarityThreshold = 0.98;
+
       const newResultsPromises = comparisonFiles.map(async (file) => {
         const similarity = calculateSimilarity(originalCode, file.content);
-        // Do not call summary if similarity is very high to save API calls
-        const summary = similarity > 0.98 
-            ? "Los códigos son casi idénticos."
-            : await getDifferenceSummary(originalCode, file.content);
-        
+        const analysis = similarity > similarityThreshold
+          ? {
+              appliedTechniques: [],
+              functionalEquivalence: "Los códigos son prácticamente idénticos.",
+              implementationAnalysis: "No se encontraron diferencias significativas.",
+            }
+          : await validateCode(originalCode, file.content);
+
         return {
           fileName: file.name,
           similarity,
-          summary,
+          analysis,
         };
       });
 
-      const newResults = await Promise.all(newResultsPromises);
       
-      // Sort results by similarity, descending
-      newResults.sort((a, b) => b.similarity - a.similarity);
 
+      const newResults = await Promise.all(newResultsPromises);
+      newResults.sort((a, b) => b.similarity - a.similarity);
       setResults(newResults);
 
     } catch (error) {
@@ -57,18 +65,26 @@ const PlagiarismDetector: React.FC = () => {
   };
   
   const getSimilarityColor = (similarity: number) => {
-    if (similarity > 0.75) return 'text-red-500';
-    if (similarity > 0.40) return 'text-yellow-500';
+    if (similarity > 0.95) return 'text-red-500';
+    if (similarity > 0.70) return 'text-yellow-500';
     return 'text-green-500';
   };
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-white mb-4">Detector de Plagio</h2>
-      <p className="text-brand-text-light mb-6">
-        Sube un archivo Python original y luego uno o más archivos para compararlos con el original.
+      <h2 className="text-2xl font-semibold text-white mb-2">Analizador de similitud de código</h2>
+      <p className="text-brand-text-light mb-4">
+        Compara múltiples scripts de python con un original usando técnicas de <strong>TF-IDF</strong>, <strong>similitud de coseno</strong> y <strong>Gemini IA</strong>.
       </p>
 
+      <h3 className="text-xl font-semibold text-white mb-2">¿Cómo usarlo? 💻</h3>
+      <ol className="list-decimal list-inside text-brand-text-light mb-6 space-y-1">
+        <li>Sube el código original.</li>
+        <li>Sube uno o más archivos a comparar.</li>
+        <li>Haz clic en "Comparar Archivos".</li>
+        <li>Revisa el porcentaje de similitud y el análisis detallado.</li>
+      </ol>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
         <CodeInput 
             label="1. Subir Archivo Original"
@@ -90,34 +106,51 @@ const PlagiarismDetector: React.FC = () => {
           {isLoading && <Spinner />}
           {isLoading ? 'Comparando...' : 'Comparar Archivos'}
         </button>
+
         {results.length > 0 && (
-          <div className="mt-8 w-full max-w-3xl">
+          <div className="mt-8 w-full max-w-3xl space-y-6">
             <h3 className="text-lg font-medium text-white text-center mb-4">Resultados de la Comparación</h3>
-            <div className="space-y-4">
-              {results.map((result, index) => (
-                <div 
-                    key={index} 
-                    className="bg-brand-light-gray p-4 rounded-lg border border-brand-border fade-in-up"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="flex-grow">
-                      <span className="font-mono text-sm text-brand-text break-all">{result.fileName}</span>
-                      <span className="text-brand-text-light mx-2">vs</span>
-                      <span className="font-mono text-sm text-brand-primary">Archivo Original</span>
-                    </div>
-                    <div className={`text-2xl font-bold shrink-0 ${getSimilarityColor(result.similarity)}`}>
-                      {(result.similarity * 100).toFixed(2)}%
+            {results.map((result, index) => (
+              <div 
+                key={index}
+                className="bg-brand-light-gray p-4 rounded-lg border border-brand-border fade-in-up"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-grow">
+                    <span className="font-mono text-sm text-brand-text break-all">{result.fileName}</span>
+                    <span className="text-brand-text-light mx-2">vs</span>
+                    <span className="font-mono text-sm text-brand-primary">Archivo Original</span>
+                  </div>
+                  <div className={`text-2xl font-bold shrink-0 ${getSimilarityColor(result.similarity)}`}>
+                    {(result.similarity * 100).toFixed(2)}%
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-brand-border space-y-4">
+                  <div>
+                    <h6 className="text-sm font-semibold text-brand-text-light mb-1">Técnicas Aplicadas</h6>
+                    <div className="flex flex-wrap gap-2">
+                      {result.analysis.appliedTechniques.length > 0 ? (
+                        result.analysis.appliedTechniques.map((tech, i) => (
+                          <span key={i} className="text-xs font-medium px-2.5 py-1 rounded-full bg-brand-secondary text-white">{tech}</span>
+                        ))
+                      ) : (
+                        <p className="text-sm text-brand-text-light italic">Ninguna técnica detectada.</p>
+                      )}
                     </div>
                   </div>
-                  {result.summary && (
-                    <div className="mt-3 pt-3 border-t border-brand-border">
-                        <p className="text-sm text-brand-text-light">{result.summary}</p>
-                    </div>
-                  )}
+                  <div>
+                    <h6 className="text-sm font-semibold text-brand-text-light mb-1">Equivalencia Funcional</h6>
+                    <p className="text-sm text-brand-text-light whitespace-pre-wrap">{result.analysis.functionalEquivalence}</p>
+                  </div>
+                  <div>
+                    <h6 className="text-sm font-semibold text-brand-text-light mb-1">Análisis de Implementación</h6>
+                    <p className="text-sm text-brand-text-light whitespace-pre-wrap">{result.analysis.implementationAnalysis}</p>
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
