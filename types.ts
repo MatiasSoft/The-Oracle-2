@@ -1,0 +1,6 @@
+
+export enum Tab {
+  DETECTOR = 'DETECTOR',
+  REWRITER = 'REWRITER',
+  VALIDATOR = 'VALIDATOR',
+}

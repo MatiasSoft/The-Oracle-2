@@ -1,0 +1,6 @@
+{
+  "name": "Analizador de Código con IA",
+  "description": "Una aplicación para detectar plagio, reescribir código y validar implementaciones de IA en programas de Python, diseñada para contextos educativos.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
