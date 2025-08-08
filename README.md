@@ -14,3 +14,4 @@ This contains everything you need to run your app locally.
    `npm run dev`
 # AI-Plagiarism
 # AI-Plagiarism
+# The-Oracle-2
