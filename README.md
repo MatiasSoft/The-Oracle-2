@@ -15,3 +15,4 @@ This contains everything you need to run your app locally.
 # AI-Plagiarism
 # AI-Plagiarism
 # The-Oracle-2
+# The-Oracle-2
