@@ -105,8 +105,8 @@ const PlagiarismDetector: React.FC = () => {
   };
   
   const getSimilarityColor = (similarity: number) => {
-    if (similarity > 0.95) return 'text-red-500';
-    if (similarity > 0.70) return 'text-yellow-500';
+    if (similarity > 0.90) return 'text-red-500';
+    if (similarity > 0.80) return 'text-yellow-500';
     return 'text-green-500';
   };
 
@@ -215,6 +215,27 @@ const PlagiarismDetector: React.FC = () => {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="mt-12 p-6 bg-brand-light-gray rounded-lg">
+        <h3 className="text-xl font-bold text-white mb-4">¿Qué significan los porcentajes de similitud?</h3>
+        <p className="text-brand-text-light mb-4">
+          Cuando subís un archivo para comparar, nuestra aplicación analiza el contenido usando un algoritmo llamado <strong>TF-IDF</strong> con <strong>Similitud de Coseno</strong>.
+        </p>
+        <p className="text-brand-text-light mb-6">
+          El algoritmo TF-IDF Es una técnica numérica utilizada para evaluar la importancia de una palabra dentro de un documento en relación con una colección de documentos (corpus). En esencia, TF-IDF calcula un peso para cada término en cada documento, indicando cuán relevante es ese término para ese documento en particular.
+        </p>
+        <p className="text-brand-text-light mb-6">
+          El algoritmo de similaridad del coseno es el encargado de desarrollar el calculo de una medida de similitud entre dos vectores distintos de cero dentro de un espacio interno, donde se mide el coseno del ángulo entre ellos.
+        </p>
+
+        <h4 className="text-lg font-semibold text-white mb-2">Importante:</h4>
+        <p className="text-brand-text-light mb-2">
+          Aunque el sistema es muy preciso para detectar similitudes textuales y estructurales, no es infalible. En casos muy complejos, el porcentaje podría no reflejar al 100% la equivalencia funcional real del código.
+        </p>
+        <p className="text-brand-text-light">
+          Por eso, recomendamos interpretar los resultados como una guía confiable, pero no como un veredicto absoluto.
+        </p>
       </div>
     </div>
   );
