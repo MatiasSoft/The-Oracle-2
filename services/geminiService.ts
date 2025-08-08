@@ -77,7 +77,7 @@ ${instructions}
 
 
 
-export const validateCode = async (originalCode: string, generatedCode: string): Promise<ValidationAnalysis> => {
+export const validateCode = async (originalProjectContent: string, comparisonProjectContent: string): Promise<ValidationAnalysis> => {
     const model = 'gemini-2.5-flash';
 
     const schema = {
@@ -101,13 +101,13 @@ export const validateCode = async (originalCode: string, generatedCode: string):
     };
 
     const prompt = `
-Eres un ingeniero de software senior experto en Python. Tu tarea es analizar dos fragmentos de código: uno original y una versión generada.
+Eres un ingeniero de software senior experto en Python. Tu tarea es analizar dos proyectos de Python: uno original y una versión generada. El contenido de cada proyecto se te proporcionará como un solo texto, donde cada archivo individual está separado por la siguiente etiqueta: ###_FIN_DEL_ARCHIVO_<NOMBRE_DEL_ARCHIVO>_###.
 
-Tu objetivo es identificar qué técnicas de modificación, de la lista provista, se usaron para crear la versión generada. Luego, analiza la equivalencia funcional y la naturaleza de la implementación.
+Tu objetivo es identificar qué técnicas de modificación, de la lista provista, se usaron. Luego, analiza la equivalencia funcional y la naturaleza de la implementación del proyecto en su conjunto.
 
 
 **Técnicas de Modificación Posibles a Identificar:**
-** Esta puede aparecer pero sola (no acompañada de otras tecnicas)**
+**Esta puede aparecer pero sola (no acompañada de otras tecnicas)**
 - Copia Literal
 **Estas pueden aparecer solas o en conjunto con otras**
 - Modificación de Comentarios
@@ -119,25 +119,26 @@ Tu objetivo es identificar qué técnicas de modificación, de la lista provista
 - Instrucciones Redundantes
 - Estructuras de Control Equivalentes
 - Modificación de Funcionalidad
+- Reorganización de la Estructura de Archivos
+- Fusión de Archivos
 
 **Análisis Requerido:**
 Devuelve tu análisis en un formato JSON que se ajuste estrictamente al esquema proporcionado. No incluyas explicaciones adicionales fuera del JSON.
 
 1.  **appliedTechniques**: Un array de strings con los nombres exactos de las técnicas que detectaste de la lista anterior.
-2.  **functionalEquivalence**: Un string de 1-2 oraciones que resuma si el código generado es funcionalmente idéntico. Menciona errores si los encuentras.
-3.  **implementationAnalysis**: Un string de 1-2 oraciones que evalúe si el cambio es trivial o si representa un enfoque algorítmico significativamente diferente.
+2.  **functionalEquivalence**: Un string de 1-2 oraciones que resuma si el proyecto generado es funcionalmente idéntico. Menciona errores o diferencias en el comportamiento si los encuentras.
+3.  **implementationAnalysis**: Un string de 1-2 oraciones que evalúe si el cambio es trivial (por ejemplo, cambios de nombres de variables) o si representa un enfoque algorítmico o una estructura de proyecto significativamente diferente. Considera la organización de los archivos y módulos.
 
-**Código Original:**
+**Proyecto Original:**
 \`\`\`python
-${originalCode}
+${originalProjectContent}
 \`\`\`
 
-**Código Generado:**
+**Proyecto Generado:**
 \`\`\`python
-${generatedCode}
+${comparisonProjectContent}
 \`\`\`
 `;
-
     try {
         const response = await ai.models.generateContent({
             model: model,

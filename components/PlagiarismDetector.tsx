@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { useCodeSimilarity } from '../hooks/useCodeSimilarity';
 import { validateCode } from '../services/geminiService';
 import Spinner from './Spinner';
-import MultiFileInput from './MultiFileInput';
-import CodeInput from './CodeInput';
 import { CodeFile } from '../App';
+
 
 interface PlagiarismResult {
   fileName: string;
@@ -17,15 +16,38 @@ interface PlagiarismResult {
 }
 
 const PlagiarismDetector: React.FC = () => {
-  const [originalCode, setOriginalCode] = useState('');
-  const [comparisonFiles, setComparisonFiles] = useState<CodeFile[]>([]);
+  const [originalProjectFiles, setOriginalProjectFiles] = useState<File[]>([]);
+  const [comparisonProjects, setComparisonProjects] = useState<File[][]>([]);
   const [results, setResults] = useState<PlagiarismResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { calculateSimilarity } = useCodeSimilarity();
 
+  const concatenateProjectFiles = async (files: File[]): Promise<string> => {
+    let content = "";
+    const pyFiles = files.filter(file => file.name.endsWith('.py'));
+
+    if (pyFiles.length === 0) {
+      console.warn("No se encontraron archivos .py en el proyecto.");
+      return "";
+    }
+    
+    for (const file of pyFiles) {
+      try {
+        const fileContent = await file.text();
+        // Agregamos un separador claro para que Gemini pueda identificar los límites entre archivos
+        content += `\n###_FIN_DEL_ARCHIVO_${file.name.toUpperCase()}_###\n\n`;
+        content += fileContent;
+      } catch (error) {
+        console.error(`Error al leer el archivo ${file.name}:`, error);
+      }
+    }
+    return content;
+  };
+
+
   const handleComparison = async () => {
-    if (!originalCode || comparisonFiles.length === 0) {
-      alert("Por favor, sube un archivo original y al menos un archivo para comparar.");
+    if (originalProjectFiles.length === 0 || comparisonProjects.length === 0) {
+      alert("Por favor, sube un proyecto original y al menos uno para comparar.");
       return;
     }
     setIsLoading(true);
@@ -34,31 +56,49 @@ const PlagiarismDetector: React.FC = () => {
     try {
       const similarityThreshold = 0.98;
 
-      const newResultsPromises = comparisonFiles.map(async (file) => {
-        const similarity = calculateSimilarity(originalCode, file.content);
+      // Concatena el contenido del proyecto original
+      const originalProjectContent = await concatenateProjectFiles(originalProjectFiles);
+      
+      const newResultsPromises = comparisonProjects.map(async (projectFiles, index) => {
+        // Concatena el contenido del proyecto a comparar
+        const comparisonProjectContent = await concatenateProjectFiles(projectFiles);
+        const projectName = `Proyecto ${index + 1}`; // O puedes extraer un nombre de alguna manera
+
+        if (!originalProjectContent || !comparisonProjectContent) {
+          return {
+            fileName: projectName,
+            similarity: 0,
+            analysis: {
+              appliedTechniques: [],
+              functionalEquivalence: "No se pudo leer uno o ambos proyectos.",
+              implementationAnalysis: "",
+            },
+          };
+        }
+
+        const similarity = calculateSimilarity(originalProjectContent, comparisonProjectContent);
+
         const analysis = similarity > similarityThreshold
           ? {
               appliedTechniques: [],
-              functionalEquivalence: "Los códigos son prácticamente idénticos.",
+              functionalEquivalence: "Los proyectos son prácticamente idénticos.",
               implementationAnalysis: "No se encontraron diferencias significativas.",
             }
-          : await validateCode(originalCode, file.content);
+          : await validateCode(originalProjectContent, comparisonProjectContent);
 
         return {
-          fileName: file.name,
+          fileName: projectName,
           similarity,
           analysis,
         };
       });
-
-      
 
       const newResults = await Promise.all(newResultsPromises);
       newResults.sort((a, b) => b.similarity - a.similarity);
       setResults(newResults);
 
     } catch (error) {
-      console.error("Error durante la comparación de plagio:", error);
+      console.error("Error durante la comparación de proyectos:", error);
     } finally {
       setIsLoading(false);
     }
@@ -79,32 +119,54 @@ const PlagiarismDetector: React.FC = () => {
 
       <h3 className="text-xl font-semibold text-white mb-2">¿Cómo usarlo? 💻</h3>
       <ol className="list-decimal list-inside text-brand-text-light mb-6 space-y-1">
-        <li>Sube el código original.</li>
-        <li>Sube uno o más archivos a comparar.</li>
-        <li>Haz clic en "Comparar Archivos".</li>
+        <li>Sube el proyecto de código original.</li>
+        <li>Sube uno o más proyectos a comparar.</li>
+        <li>Haz clic en "Comparar Proyectos".</li>
         <li>Revisa el porcentaje de similitud y el análisis detallado.</li>
       </ol>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-        <CodeInput 
-            label="1. Subir Archivo Original"
-            value={originalCode}
-            onChange={setOriginalCode}
-        />
         <div>
-            <label className="block text-sm font-medium text-brand-text-light mb-2">2. Subir Archivos a Comparar</label>
-            <MultiFileInput files={comparisonFiles} onFilesChange={setComparisonFiles} />
+          <label className="block text-sm font-medium text-brand-text-light mb-2">1. Subir Proyecto Original</label>
+          <input
+            type="file"
+            webkitdirectory=""
+            mozdirectory=""
+            onChange={(e) => setOriginalProjectFiles(Array.from(e.target.files))}
+            className="block w-full text-sm text-brand-text-light
+                       file:mr-4 file:py-2 file:px-4
+                       file:rounded-full file:border-0
+                       file:text-sm file:font-semibold
+                       file:bg-brand-primary file:text-white
+                       hover:file:bg-brand-secondary cursor-pointer"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-brand-text-light mb-2">2. Subir Proyectos a Comparar</label>
+          <input
+            type="file"
+            webkitdirectory=""
+            mozdirectory=""
+            multiple
+            onChange={(e) => setComparisonProjects([Array.from(e.target.files)])}
+            className="block w-full text-sm text-brand-text-light
+                       file:mr-4 file:py-2 file:px-4
+                       file:rounded-full file:border-0
+                       file:text-sm file:font-semibold
+                       file:bg-brand-primary file:text-white
+                       hover:file:bg-brand-secondary cursor-pointer"
+          />
         </div>
       </div>
 
       <div className="mt-6 flex flex-col items-center">
         <button
           onClick={handleComparison}
-          disabled={isLoading || !originalCode || comparisonFiles.length === 0}
+          disabled={isLoading || originalProjectFiles.length === 0 || comparisonProjects.length === 0}
           className="flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-brand-primary hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-brand-gray focus:ring-brand-primary transition-all duration-200 transform hover:scale-105 disabled:bg-opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading && <Spinner />}
-          {isLoading ? 'Comparando...' : 'Comparar Archivos'}
+          {isLoading ? 'Comparando...' : 'Comparar Proyectos'}
         </button>
 
         {results.length > 0 && (
@@ -120,7 +182,7 @@ const PlagiarismDetector: React.FC = () => {
                   <div className="flex-grow">
                     <span className="font-mono text-sm text-brand-text break-all">{result.fileName}</span>
                     <span className="text-brand-text-light mx-2">vs</span>
-                    <span className="font-mono text-sm text-brand-primary">Archivo Original</span>
+                    <span className="font-mono text-sm text-brand-primary">Proyecto Original</span>
                   </div>
                   <div className={`text-2xl font-bold shrink-0 ${getSimilarityColor(result.similarity)}`}>
                     {(result.similarity * 100).toFixed(2)}%
